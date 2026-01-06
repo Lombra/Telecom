@@ -22,14 +22,6 @@ end)
 
 
 local function openChat(target, chatType)
-	-- ChatFrame_SendSmartTell does not come with a chat type; figures out from target string
-	if not chatType then
-		if BNet_GetBNetIDAccount(target) then
-			chatType = "BN_WHISPER"
-		else
-			chatType = "WHISPER"
-		end
-	end
 	if chatType == "WHISPER" then
 		target = Telecom:GetFullCharacterName(target)
 	end
@@ -42,31 +34,31 @@ local function openChat(target, chatType)
 end
 
 local hooks = {
-	ChatFrame_ReplyTell = function(chatFrame)
-		local lastTell, lastTellType = ChatEdit_GetLastTellTarget()
+	ReplyTell = function(chatFrame)
+		local lastTell, lastTellType = ChatFrameUtil.GetLastTellTarget()
 		if lastTell then
 			Telecom.editbox.setText = true
 			openChat(lastTell, lastTellType)
 		end
 	end,
-	ChatFrame_ReplyTell2 = function(chatFrame)
-		local lastTold, lastToldType = ChatEdit_GetLastToldTarget()
+	ReplyTell2 = function(chatFrame)
+		local lastTold, lastToldType = ChatFrameUtil.GetLastToldTarget()
 		if lastTold then
 			Telecom.editbox.setText = true
 			openChat(lastTold, lastToldType)
 		end
 	end,
-	ChatFrame_SendTell = function(name)
+	SendTell = function(name)
 		openChat(name, "WHISPER")
 	end,
-	ChatFrame_SendSmartTell = function(name)
-		openChat(name)
+	SendBNetTell = function(name)
+		openChat(name, "BN_WHISPER")
 	end,
 }
 
 for functionName, hook in pairs(hooks) do
-	local originalFunction = _G[functionName]
-	_G[functionName] = function(...)
+	local originalFunction = ChatFrameUtil[functionName]
+	ChatFrameUtil[functionName] = function(...)
 		if Telecom:ShouldSuppress() then
 			originalFunction(...)
 			return
@@ -78,18 +70,10 @@ end
 
 
 local function messageEventFilter(event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14)
-	local chatFilters = ChatFrame_GetMessageEventFilters(event)
-	if chatFilters then
-		for _, filterFunc in pairs(chatFilters) do
-			local filter, newarg1, newarg2, newarg3, newarg4, newarg5, newarg6, newarg7, newarg8, newarg9, newarg10, newarg11, newarg12, newarg13, newarg14 =
-				filterFunc(TelecomFrame, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14)
-			if filter then
+	local shouldDiscardMessage, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14 =
+		ChatFrameUtil.ProcessMessageEventFilters(TelecomFrame, event, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14)
+	if shouldDiscardMessage then
 				return true
-			elseif newarg1 then
-				arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14 =
-					newarg1, newarg2, newarg3, newarg4, newarg5, newarg6, newarg7, newarg8, newarg9, newarg10, newarg11, newarg12, newarg13, newarg14
-			end
-		end
 	end
 	return false, arg1, arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10, arg11, arg12, arg13, arg14
 end
@@ -111,11 +95,11 @@ local function filter(frame)
 	return frame ~= TelecomFrame and not (Telecom:ShouldSuppress() and Telecom.db.defaultHandlerWhileSuppressed)
 end
 
-ChatFrame_AddMessageEventFilter("CHAT_MSG_AFK", filter)
-ChatFrame_AddMessageEventFilter("CHAT_MSG_DND", filter)
+ChatFrameUtil.AddMessageEventFilter("CHAT_MSG_AFK", filter)
+ChatFrameUtil.AddMessageEventFilter("CHAT_MSG_DND", filter)
 
 for event in pairs(chatEvents) do
-	ChatFrame_AddMessageEventFilter(event, filter)
+	ChatFrameUtil.AddMessageEventFilter(event, filter)
 	f:RegisterEvent(event)
 end
 

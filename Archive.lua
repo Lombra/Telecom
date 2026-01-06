@@ -84,7 +84,9 @@ archiveLog:SetAutoFocus(false)
 archiveLog:SetMultiLine(true)
 -- archiveLog:SetIndentedWordWrap(true)
 archiveLog:SetHyperlinksEnabled(true)
-archiveLog:SetScript("OnHyperlinkClick", ChatFrame_OnHyperlinkShow)
+archiveLog:SetScript("OnHyperlinkClick", function(self, link, text, button)
+	SetItemRef(link, text, button, self)
+end)
 archiveLog:SetScript("OnEscapePressed", archiveLog.ClearFocus)
 archiveLog:SetScript("OnCursorChanged", function(self, x, y, width, height)
 	if x == self.cursorX and y == self.cursorY then
@@ -105,7 +107,7 @@ local function printLog()
 	local darken = 0.2
 	local color = ChatTypeInfo[selectedLogType]
 	local thread = Telecom:GetThread(selectedLog, selectedLogType)
-	
+
 	local target = selectedLog or UNKNOWN
 	if selectedLogType == "WHISPER" then
 		target = Ambiguate(target, "none")
@@ -128,12 +130,12 @@ local function printLog()
 				sender = "|cffffffffYou|r"
 				r, g, b = max(0, r - darken), max(0, g - darken), max(0, b - darken)
 			end
-			
+
 			local time = date("*t", message.timestamp)
 			local colorString = format("|cff%.2x%.2x%.2x", r * 255, g * 255, b * 255)
-			
+
 			text = text..format("\n|cffd0d0d0%s|r %s%s%s: %s|r", date("%H:%M", message.timestamp), colorString, sender, colorString, message.text)
-			
+
 			local nextMessage = thread.messages[i + 1]
 			local nextTime = nextMessage and date("*t", nextMessage.timestamp)
 			if nextMessage and nextMessage.messageType and (nextTime.yday ~= time.yday or nextTime.year ~= time.year) then
